@@ -3,9 +3,10 @@
 We are going to find Indian Stocks below their intrinsic value, their customer ratings, their overview, all the important statistic and only then and then to buy a stock
 
 Phases:
--> Fetch A Stock Financials
+<br>
+- [ ] Fetch A Stock Financials
 
-Do Measurements:
+- [ ] Do Measurements:
 - DCF (intrinsic value)
 - CAGR
 - Revenue & Profit
@@ -15,9 +16,14 @@ Do Measurements:
 - Customer Perception
 - News Report
 
--> Prepare Portfolio & Stocks & Show Statistics
+- [ ] Prepare Portfolio & Stocks & Show Statistics
 
 
 Then calculate a weighted score for the stock <br>
-''' w = 0.25 * DCF Score + 0.2 * CAGR Revenue & Profit Score + 0.2 * Customer Satisfaction Score + 0.2 * MOAT Analysis + 0.1 * Book Value Score''' 
+``` w = 0.25 * DCF Score + 0.2 * CAGR Revenue & Profit Score + 0.2 * Customer Satisfaction Score + 0.2 * MOAT Analysis + 0.1 * Book Value Score ```
 
+
+
+Data Standardization:
+- All Money Values are in Cr
+- JSON format storage
