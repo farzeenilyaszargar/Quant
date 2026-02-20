@@ -2,14 +2,14 @@
 
 We are going to find Indian Stocks below their intrinsic value, their customer ratings, their overview, all the important statistic and only then and then to buy a stock
 
-Phases:
+### Phases:
 <br>
 
-##### Fetch A Stock Financials
+#### Fetch A Stock Financials
 - Scraping from trusted sites
 - yfinance data
 
-##### Do Measurements:
+#### Do Measurements:
 - DCF (intrinsic value)
 - CAGR
 - Revenue & Profit
@@ -19,7 +19,7 @@ Phases:
 - Customer Perception
 - News Report
 
-##### Prepare Portfolio & Stocks & Show Statistics
+#### Prepare Portfolio & Stocks & Show Statistics
 
 
 Then calculate a weighted score for the stock <br>
@@ -27,6 +27,6 @@ Then calculate a weighted score for the stock <br>
 
 
 
-##### Data Standardization:
+#### Data Standardization:
 - All Money Values are in Cr
 - JSON format storage
