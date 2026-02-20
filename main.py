@@ -1,23 +1,21 @@
 import json
+import random
 import time
-import listOfStocks # type: ignore
-from stockFetch import stockFetchData
+from stockFetch import getStockData
 
 
-results = []
+
+stocks = []
 
 # Fetch stock data for each stock in the list
 
-for stock in listOfStocks.stocks:
-    result = stockFetchData(stock)
-    results.append(result)
-    time.sleep(1)
+with open("listOfStocks.json", "r") as f:
+    stocks = json.load(f)
 
-
-# store in json file
-with open('stockData.json', 'w') as f:
-    json.dump(results, f, indent=4)
-
+for stock in stocks:
+    result = getStockData(stock)
+    print(f"Fetched data for {result}")
+    time.sleep(random.uniform(2, 5))  
 
 
 print("Done")

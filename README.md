@@ -3,7 +3,6 @@
 We are going to find Indian Stocks below their intrinsic value, their customer ratings, their overview, all the important statistic and only then and then to buy a stock
 
 ### Phases:
-<br>
 
 #### Fetch A Stock Financials
 - Scraping from trusted sites
@@ -22,7 +21,7 @@ We are going to find Indian Stocks below their intrinsic value, their customer r
 #### Prepare Portfolio & Stocks & Show Statistics
 
 
-Then calculate a weighted score for the stock <br>
+Then calculate a weighted score for the stock <br><br>
 ``` w = 0.3 * DCF Score + 0.2 * CAGR Revenue Growth & Profit Score + 0.1 * ROCE + 0.15 * Customer Satisfaction & MOAT Analysis + 0.05 * DII & FII Activity & D/E + 0.2 * Tailwind Sectors (AI, Indian Tech, Defense, Biotech, Green Energy etc.) ```
 
 
