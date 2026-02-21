@@ -2,18 +2,50 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import json
+import random
+import time
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 BASE_URL = "https://www.screener.in/company/{}/consolidated/"
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0"
-}
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+]
+
+def get_session():
+    session = requests.Session()
+    retry = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+SESSION = get_session()
 
 def fetch_page(symbol):
     url = BASE_URL.format(symbol)
-    res = requests.get(url, headers=HEADERS)
+    headers = {
+        "User-Agent": random.choice(USER_AGENTS),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "DNT": "1",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1"
+    }
+    # Add a jitter delay before every request
+    time.sleep(random.uniform(5, 10))
+    
+    res = SESSION.get(url, headers=headers, timeout=30)
     if res.status_code != 200:
-        raise Exception("Failed to fetch page")
+        raise Exception(f"Failed to fetch page: HTTP {res.status_code}")
     return BeautifulSoup(res.text, "html.parser")
 
 
@@ -26,6 +58,22 @@ def get_ratios(soup):
         key = item.find("span", class_="name").text.strip()
         value = item.find("span", class_="number").text.strip()
         ratios[key] = value
+
+    # Also try to get Sector and Industry
+    try:
+        peers = soup.find("div", {"id": "peers"})
+        if peers:
+            links = peers.find_all("a")
+            # Usually Breadcrumbs or Peers section has sector/industry links
+            # More reliable: look for the breadcrumb at the top
+            breadcrumb = soup.find("p", class_="breadcrumb")
+            if breadcrumb:
+                links = breadcrumb.find_all("a")
+                if len(links) >= 3:
+                    ratios["Sector"] = links[1].text.strip()
+                    ratios["Industry"] = links[2].text.strip()
+    except:
+        pass
 
     return ratios
 

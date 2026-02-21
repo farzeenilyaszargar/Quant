@@ -4,3 +4,7 @@ venv/
 .DS_Store
 stockData.json
 *.pyc
+website/node_modules/
+website/.next/
+website/data/stockData.json
+testStocks.json
