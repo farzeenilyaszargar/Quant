@@ -35,11 +35,30 @@ def update_sectors():
                     if len(links) >= 2:
                         sector = links[1].text.strip()
             
+            # Get Ratios
+            pe = 0
+            pb = 0
+            top = soup.find_all("li", class_="flex flex-space-between")
+            for item in top:
+                name = item.find("span", class_="name").text.strip()
+                val = item.find("span", class_="number").text.strip().replace(",", "")
+                if "Stock P/E" in name: 
+                    try: pe = float(val)
+                    except: pe = 0
+                if "Book Value" in name:
+                    try:
+                        bv = float(val)
+                        if bv > 0: pb = round(stock.get("Current Price", 0) / bv, 2)
+                    except: pb = 0
+
             stock["Sector"] = sector
             stock["Broad Sector"] = get_broad_sector(sector)
+            stock["PE"] = pe
+            stock["PB"] = pb
+            
             if "Industry" in stock:
                 del stock["Industry"]
-            print(f"  Result: {sector} -> {stock['Broad Sector']}")
+            print(f"  Result: {sector} -> {stock['Broad Sector']} (PE: {pe}, PB: {pb})")
             
             # Save intermediate results
             with open("stockData.json", "w") as f:

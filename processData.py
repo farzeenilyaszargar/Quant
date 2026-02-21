@@ -88,7 +88,9 @@ def getRatios(data):
     if isinstance(intrinsic_val, complex):
         intrinsic_val = intrinsic_val.real
     
-    dcf_score = min(100, max(0, (intrinsic_val / market_cap) * 50)) 
+    # Stricter scoring: (Intrinsic Value / Market Cap) * 25
+    # Base 25 = Fair Value, Base 50 = 2x Undervalued, Base 100 = 4x Undervalued
+    dcf_score = min(100, max(0, (intrinsic_val / market_cap) * 25))
     growth_score = min(100, max(0, (float(rev_cagr) + float(profit_cagr)) * 2)) 
     roce_score = min(100, max(0, float(roce) * 2))
     

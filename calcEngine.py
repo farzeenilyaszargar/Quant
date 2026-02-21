@@ -1,18 +1,25 @@
 
-def calculate_dcf(fcf, growth_rate=0.08, terminal_growth=0.02, discount_rate=0.15, years=7):
+def calculate_dcf(fcf, growth_rate=0.08, terminal_growth=0.015, discount_rate=0.18, years=10):
     """
-    Simple DCF calculation.
+    Stricter DCF calculation with growth decay.
     fcf: Current Free Cash Flow (Cr)
-    growth_rate: Expected annual growth rate for the next 'years'
-    terminal_growth: Rate at which company grows after 'years'
-    discount_rate: WACC or desired return
+    growth_rate: Initial growth rate (capped at 25%)
+    terminal_growth: Rate after projection (stricter 1.5%)
+    discount_rate: Increased to 18% for conservative safety
     """
     if fcf <= 0:
         return 0
     
+    # Cap excessive growth rates
+    working_growth = min(0.25, growth_rate)
+    decay_factor = 0.9  # Growth slows down by 10% every year
+    
     projected_fcf = []
+    current_fcf = fcf
     for i in range(1, years + 1):
-        projected_fcf.append(fcf * (1 + growth_rate)**i)
+        current_fcf *= (1 + working_growth)
+        projected_fcf.append(current_fcf)
+        working_growth *= decay_factor  # Step-down growth modeling
     
     # Discounted cash flows
     discounted_fcf = [val / (1 + discount_rate)**(i+1) for i, val in enumerate(projected_fcf)]
