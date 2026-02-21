@@ -1,64 +1,83 @@
-import numpy as np
 
-def allocate_portfolio(stocks_data, sector_limits=None):
+def get_broad_sector(sector):
+    """Maps granular sectors to broad categories."""
+    mapping = {
+        "Financial": "Finance",
+        "Bank": "Finance",
+        "Insurance": "Finance",
+        "NBFC": "Finance",
+        "IT": "Technology",
+        "Software": "Technology",
+        "Tech": "Technology",
+        "Pharmaceutical": "Healthcare",
+        "Healthcare": "Healthcare",
+        "Oils & Gas": "Energy",
+        "Power": "Energy",
+        "Energy": "Energy",
+        "Auto": "Consumer",
+        "Retail": "Consumer",
+        "FMCG": "Consumer",
+        "Consumer": "Consumer",
+        "Telecom": "Communication",
+        "Infrastructure": "Industrial",
+        "Industrial": "Industrial",
+        "Textile": "Industrial",
+        "Chemicals": "Industrial"
+    }
+    
+    combined = str(sector).lower()
+    for key, broad in mapping.items():
+        if key.lower() in combined:
+            return broad
+    return "Others"
+
+def allocate_portfolio(stocks_data):
     """
-    Optimizes portfolio allocation based on Quant Score and Sector Constraints.
-    stocks_data: List of processed stock dictionaries
-    sector_limits: Dict like {'Financial': 0.25, 'IT': 0.20}
+    Optimizes portfolio allocation with strict filtering:
+    1. Overvaluation < 15% (Intrinsic Price * 1.15 >= Current Price)
+    2. Final Score >= 45 (High Quality)
+    3. Limit to Top 50
     """
     if not stocks_data:
         return []
 
-    if sector_limits is None:
-        sector_limits = {
-            "Financial Services": 0.25,
-            "Information Technology": 0.20,
-            "Healthcare": 0.15,
-            "Energy": 0.15,
-            "Consumer Discretionary": 0.15,
-            "Others": 0.10
-        }
+    processed_stocks = []
+    for s in stocks_data:
+        current_price = s.get('Current Price', 0)
+        intrinsic_price = s.get('Intrinsic Price Per Share', 0)
+        final_score = s.get('final_score', 0)
+        
+        # 1. Broad Sector Assignment
+        s['Broad Sector'] = get_broad_sector(s.get('Sector', 'Other'))
 
-    # 1. Calculate Base Weights from Final Score
-    # We use (final_score^2) to emphasize top picks
-    total_score = sum(s['final_score'] ** 2 for s in stocks_data)
+        # 2. Filtering
+        # Case A: Overvalued (Current is 15% more than intrinsic) -> Ignore
+        if intrinsic_price > 0 and current_price > (intrinsic_price * 1.15):
+            continue
+        
+        # Case B: Low Score
+        if final_score < 45:
+            continue
+            
+        processed_stocks.append(s)
+
+    # 3. Sort by score and take top 50
+    processed_stocks.sort(key=lambda x: x['final_score'], reverse=True)
+    top_50 = processed_stocks[:50]
+
+    if not top_50:
+        return []
+
+    # 4. Calculate Base Weights (Square of score for alpha)
+    total_score_sq = sum(s['final_score'] ** 2 for s in top_50)
     
     allocations = []
-    for s in stocks_data:
-        base_weight = (s['final_score'] ** 2) / total_score
+    for s in top_50:
+        weight = (s['final_score'] ** 2) / total_score_sq
         allocations.append({
             "symbol": s['symbol'],
-            "sector": s.get('Sector', 'Others'),
-            "score": s['final_score'],
-            "base_weight": base_weight
+            "final_weight": round(weight, 4),
+            "broad_sector": s['Broad Sector']
         })
-
-    # 2. Apply Sector Constraints (Heuristic approach)
-    # Group by sector
-    sector_groups = {}
-    for a in allocations:
-        sect = a['sector']
-        if sect not in sector_groups:
-            sector_groups[sect] = []
-        sector_groups[sect].append(a)
-
-    final_allocs = []
-    total_assigned_weight = 0
-
-    for sect, group in sector_groups.items():
-        limit = sector_limits.get(sect, 0.15) # default 15% for unspecified sectors
-        sect_total_base = sum(a['base_weight'] for a in group)
-        
-        # If total base weight of sector exceeds limit, we scale it down
-        scaling_factor = min(1.0, limit / sect_total_base) if sect_total_base > 0 else 0
-        
-        for a in group:
-            a['final_weight'] = round(a['base_weight'] * scaling_factor, 4)
-            total_assigned_weight += a['final_weight']
-
-    # 3. Re-normalize to ensure sum is 100%
-    if total_assigned_weight > 0:
-        for a in allocations:
-            a['final_weight'] = round(a['final_weight'] / total_assigned_weight, 4)
 
     return allocations

@@ -87,12 +87,26 @@ def main():
                 
                 # Apply allocation logic to the current set of results
                 valid_results = [r for r in results if 'final_score' in r]
-                allocations = allocate_portfolio(valid_results)
-                for r_item in valid_results:
-                    match = next((a for a in allocations if a['symbol'] == r_item['symbol']), None)
-                    if match:
-                        r_item['portfolio_weight'] = match['final_weight']
                 
+                # First, ensure all have broad sector for the "All Stocks" view
+                from portfolioOptimizer import get_broad_sector
+                for r in valid_results:
+                    r['Broad Sector'] = get_broad_sector(r.get('Sector', 'Other'))
+                
+                # Get the filtered top 50 allocations
+                allocations = allocate_portfolio(valid_results)
+                
+                # Reset all weights first
+                for r in valid_results:
+                    r['portfolio_weight'] = 0
+                
+                # Assign weights to the selected ones
+                for alloc in allocations:
+                    match = next((r for r in valid_results if r['symbol'] == alloc['symbol']), None)
+                    if match:
+                        match['portfolio_weight'] = alloc['final_weight']
+                
+                # Sort full results by score for the table
                 valid_results.sort(key=lambda x: x.get('final_score', 0), reverse=True)
                 save_outputs(valid_results)
             else:

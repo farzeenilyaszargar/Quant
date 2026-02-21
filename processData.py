@@ -96,16 +96,21 @@ def getRatios(data):
     fii_dii_score = min(100, (float(fii_latest) + float(dii_latest)))
     fii_dii_de_score = (de_score + fii_dii_score) / 2
     
+    pe = clean_float(ratios.get('Stock P/E'))
+    book_value = clean_float(ratios.get('Book Value'))
+    pb = current_price / book_value if book_value > 0 else 0
+
     processed = {
         "symbol": data.get('symbol', 'Unknown'),
         "Sector": ratios.get('Sector', 'Other'),
-        "Industry": ratios.get('Industry', 'Other'),
         "Market Cap (Cr)": market_cap,
         "Current Price": current_price,
         "Intrinsic Value (Total Cr)": round(float(intrinsic_val), 2),
         "Shares Outstanding (Cr)": round(market_cap / current_price, 2),
         "Intrinsic Price Per Share": round(float(intrinsic_val) / (market_cap / current_price), 2),
         "ROCE (%)": roce,
+        "PE": pe,
+        "PB": round(pb, 2),
         "D/E": de,
         "Rev CAGR (%)": round(float(rev_cagr), 2),
         "FCF (Cr)": fcf,

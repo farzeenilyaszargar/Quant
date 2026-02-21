@@ -59,19 +59,23 @@ def get_ratios(soup):
         value = item.find("span", class_="number").text.strip()
         ratios[key] = value
 
-    # Also try to get Sector and Industry
+    # Also try to get Sector
     try:
-        peers = soup.find("div", {"id": "peers"})
+        # Check peers section first as it's very reliable
+        peers = soup.find("section", {"id": "peers"})
         if peers:
-            links = peers.find_all("a")
-            # Usually Breadcrumbs or Peers section has sector/industry links
-            # More reliable: look for the breadcrumb at the top
+            # The first few links in the peers section are usually Sector > Industry
+            sector_links = peers.find_all("a", href=lambda x: x and "/market/" in x)
+            if sector_links:
+                ratios["Sector"] = sector_links[0].text.strip()
+        
+        # Fallback to breadcrumb if sector still missing
+        if "Sector" not in ratios:
             breadcrumb = soup.find("p", class_="breadcrumb")
             if breadcrumb:
                 links = breadcrumb.find_all("a")
-                if len(links) >= 3:
+                if len(links) >= 2:
                     ratios["Sector"] = links[1].text.strip()
-                    ratios["Industry"] = links[2].text.strip()
     except:
         pass
 
