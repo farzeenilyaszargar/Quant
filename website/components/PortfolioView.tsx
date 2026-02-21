@@ -15,14 +15,14 @@ const TooltipIcon = ({ text }: { text: string }) => {
     const [show, setShow] = React.useState(false);
     return (
         <div className="relative inline-block ml-2 align-middle" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
-            <Info className="w-3 h-3 text-gray-500 cursor-help hover:text-blue-400 transition-colors" />
+            <Info className="w-4 h-4 text-slate-400 cursor-help hover:text-blue-500 transition-colors" />
             <AnimatePresence>
                 {show && (
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-3 bg-gray-900 border border-white/10 rounded-xl text-[10px] font-medium text-gray-300 w-48 shadow-2xl z-50 pointer-events-none"
+                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-3 bg-slate-800 rounded-lg text-xs font-medium text-white w-56 shadow-xl z-50 pointer-events-none"
                     >
                         {text}
                     </motion.div>
@@ -88,67 +88,67 @@ export default function PortfolioView({ data }: { data: any[] }) {
     }, [portfolioStocks]);
 
     return (
-        <section id="main-portfolio" className="space-y-12">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-l-4 border-blue-600 pl-8">
+        <section id="main-portfolio" className="space-y-10">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-200">
                 <div>
-                    <h2 className="text-4xl md:text-5xl font-black tracking-tighter uppercase mb-2">Main Quantitative Portfolio</h2>
-                    <p className="text-gray-500 font-medium max-w-xl">Optimized capital allocation based on intrinsic relative value and qualitative moat assessment.</p>
+                    <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">Main Quantitative Portfolio</h2>
+                    <p className="text-slate-500 font-medium">Optimized capital allocation based on intrinsic relative value and qualitative moat assessment.</p>
                 </div>
-                <div className="bg-blue-600/10 border border-blue-500/20 px-6 py-3 rounded-2xl">
-                    <div className="text-gray-500 text-[9px] font-black uppercase tracking-[0.3em] mb-1">Target Portfolio size</div>
-                    <div className="text-2xl font-mono font-bold text-blue-400">{portfolioStocks.length} <span className="text-sm opacity-50">/ 50</span></div>
+                <div className="bg-blue-50 border border-blue-100 px-6 py-3 rounded-xl flex items-center gap-4">
+                    <div className="text-blue-800 text-xs font-semibold uppercase tracking-wider">Target Size</div>
+                    <div className="text-2xl font-bold text-blue-600">{portfolioStocks.length} <span className="text-sm opacity-60 font-normal">/ 50</span></div>
                 </div>
             </div>
 
             {stats && (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                    <div className="glass-card p-6 border-blue-500/20 bg-blue-500/[0.02]">
-                        <div className="flex items-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                    <div className="dashboard-card p-6">
+                        <div className="flex items-center text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
                             Sharpe Ratio <TooltipIcon text="Risk-adjusted return. Higher indicates better returns for the level of risk taken (using Revenue Growth vs Risk-Free Rate)." />
                         </div>
-                        <div className="text-3xl font-black text-blue-400 font-mono tracking-tighter">{stats.sharpe.toFixed(2)}</div>
+                        <div className="text-3xl font-bold text-slate-900 tracking-tight">{stats.sharpe.toFixed(2)}</div>
                     </div>
-                    <div className="glass-card p-6 border-emerald-500/20 bg-emerald-500/[0.02]">
-                        <div className="flex items-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2">
+                    <div className="dashboard-card p-6">
+                        <div className="flex items-center text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
                             Sortino Ratio <TooltipIcon text="Similar to Sharpe, but only penalizes negative volatility (downside risk). Better for identifying consistent growth." />
                         </div>
-                        <div className="text-3xl font-black text-emerald-400 font-mono tracking-tighter">{stats.sortino.toFixed(2)}</div>
+                        <div className="text-3xl font-bold text-slate-900 tracking-tight">{stats.sortino.toFixed(2)}</div>
                     </div>
-                    <div className="glass-card p-6 border-purple-500/20 bg-purple-500/[0.02]">
-                        <div className="flex items-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2">
+                    <div className="dashboard-card p-6">
+                        <div className="flex items-center text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
                             Portfolio P/E <TooltipIcon text="Weighted Average Price-to-Earnings ratio of the portfolio. Indicates how expensive the earnings of the portfolio are." />
                         </div>
-                        <div className="text-3xl font-black text-purple-400 font-mono tracking-tighter">{stats.pe.toFixed(1)}x</div>
+                        <div className="text-3xl font-bold text-slate-900 tracking-tight">{stats.pe.toFixed(1)}x</div>
                     </div>
-                    <div className="glass-card p-6 border-amber-500/20 bg-amber-500/[0.02]">
-                        <div className="flex items-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2">
+                    <div className="dashboard-card p-6">
+                        <div className="flex items-center text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
                             Portfolio P/B <TooltipIcon text="Weighted Average Price-to-Book ratio. Compares the market price of the portfolio to its book value." />
                         </div>
-                        <div className="text-3xl font-black text-amber-500 font-mono tracking-tighter">{stats.pb.toFixed(1)}x</div>
+                        <div className="text-3xl font-bold text-slate-900 tracking-tight">{stats.pb.toFixed(1)}x</div>
                     </div>
-                    <div className="glass-card p-6 border-white/10 hidden lg:block">
-                        <div className="flex items-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2">
+                    <div className="dashboard-card p-6 hidden lg:block">
+                        <div className="flex items-center text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
                             Exp. Return <TooltipIcon text="The weighted average Revenue CAGR of the portfolio holdings, representing the fundamental growth engine." />
                         </div>
-                        <div className="text-3xl font-black text-white font-mono tracking-tighter">{stats.expectedReturn.toFixed(1)}%</div>
+                        <div className="text-3xl font-bold text-slate-900 tracking-tight">{stats.expectedReturn.toFixed(1)}%</div>
                     </div>
                 </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="glass-card p-8 min-h-[450px]">
-                    <h3 className="text-sm font-black uppercase tracking-[0.3em] mb-8 text-blue-300">Structural Alpha (Score Index)</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+                <div className="dashboard-card p-6 md:p-8 min-h-[450px]">
+                    <h3 className="text-sm font-semibold uppercase tracking-wider mb-6 text-slate-700">Structural Alpha (Score Index)</h3>
                     <div className="h-[320px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={chartData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
-                                <XAxis dataKey="name" stroke="#64748b" tick={{ fontSize: 10, fontWeight: 700 }} />
-                                <YAxis stroke="#64748b" tick={{ fontSize: 10, fontWeight: 700 }} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                                <XAxis dataKey="name" stroke="#64748b" tick={{ fill: '#475569', fontSize: 11, fontWeight: 500 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
+                                <YAxis stroke="#64748b" tick={{ fill: '#475569', fontSize: 11, fontWeight: 500 }} axisLine={false} tickLine={false} />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}
-                                    itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 700 }}
+                                    contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                                    itemStyle={{ color: '#0f172a', fontSize: '12px', fontWeight: 600 }}
                                 />
-                                <Bar dataKey="score" radius={[6, 6, 0, 0]}>
+                                <Bar dataKey="score" radius={[4, 4, 0, 0]}>
                                     {chartData.map((_entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
@@ -158,8 +158,8 @@ export default function PortfolioView({ data }: { data: any[] }) {
                     </div>
                 </div>
 
-                <div className="glass-card p-8">
-                    <h3 className="text-sm font-black uppercase tracking-[0.3em] mb-8 text-purple-300">Broad Sector Diversification</h3>
+                <div className="dashboard-card p-6 md:p-8">
+                    <h3 className="text-sm font-semibold uppercase tracking-wider mb-6 text-slate-700">Broad Sector Diversification</h3>
                     <div className="h-[320px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -167,9 +167,9 @@ export default function PortfolioView({ data }: { data: any[] }) {
                                     data={sectorData}
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={80}
+                                    innerRadius={70}
                                     outerRadius={110}
-                                    paddingAngle={10}
+                                    paddingAngle={5}
                                     dataKey="value"
                                     nameKey="name"
                                 >
@@ -179,7 +179,7 @@ export default function PortfolioView({ data }: { data: any[] }) {
                                 </Pie>
                                 <Tooltip
                                     formatter={(val: any) => `${(Number(val) * 100).toFixed(1)}%`}
-                                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
+                                    contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                                 />
                             </PieChart>
                         </ResponsiveContainer>
@@ -187,31 +187,31 @@ export default function PortfolioView({ data }: { data: any[] }) {
                 </div>
             </div>
 
-            <div className="glass-card p-10 bg-gradient-to-br from-white/[0.03] to-transparent">
-                <h3 className="text-xl font-black mb-10 flex items-center gap-3 text-white">
-                    <Target className="w-6 h-6 text-emerald-400" />
+            <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm mt-8">
+                <h3 className="text-xl font-bold mb-8 flex items-center gap-3 text-slate-900">
+                    <Target className="w-6 h-6 text-blue-600" />
                     Strategic Capital Allocation
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                     {portfolioStocks.map((s, i) => (
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.98 }}
-                            whileInView={{ opacity: 1, scale: 1 }}
+                            initial={{ opacity: 0, y: 10 }}
+                            whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             key={s.symbol}
-                            className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex items-center justify-between group hover:border-blue-500/40 hover:bg-white/[0.05] transition-all cursor-pointer shadow-xl"
+                            className="bg-slate-50 border border-slate-200 p-5 rounded-xl flex items-center justify-between group hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
                             onClick={() => router.push(`/insights?symbol=${s.symbol}`)}
                         >
                             <div className="flex items-center gap-4">
-                                <span className="text-3xl font-black text-white/5 group-hover:text-blue-500/10 transition-colors">{i + 1}</span>
+                                <span className="text-2xl font-bold text-slate-300 group-hover:text-blue-500 transition-colors">{i + 1}</span>
                                 <div>
-                                    <div className="font-black text-xl leading-tight group-hover:text-blue-400 transition-colors">{s.symbol}</div>
-                                    <div className="text-[9px] text-gray-500 uppercase font-black tracking-[0.2em] mt-1">{s["Broad Sector"] || 'CORE ASSET'}</div>
+                                    <div className="font-bold text-lg leading-tight text-slate-900 group-hover:text-blue-600 transition-colors">{s.symbol}</div>
+                                    <div className="text-xs text-slate-500 font-medium uppercase mt-0.5">{s["Broad Sector"] || 'CORE ASSET'}</div>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <div className="text-2xl font-mono font-black text-white tracking-widest">{(s.portfolio_weight * 100).toFixed(1)}%</div>
-                                <div className="text-[10px] text-gray-500 font-black uppercase tracking-widest italic mt-1">Weight</div>
+                                <div className="text-xl font-bold text-slate-900 tracking-tight">{(s.portfolio_weight * 100).toFixed(1)}%</div>
+                                <div className="text-xs text-slate-400 font-medium mt-0.5">Weight</div>
                             </div>
                         </motion.div>
                     ))}

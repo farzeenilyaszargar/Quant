@@ -72,17 +72,38 @@ def getRatios(data):
     rev_cagr = calculate_cagr(pnl, "Sales")
     profit_cagr = calculate_cagr(pnl, "Net Profit")
     
-    # 3. Free Cash Flow (Latest)
-    cfo = get_latest_value(cf, "Cash from Operating Activity")
-    capex = abs(get_latest_value(cf, "Fixed assets purchased")) 
-    fcf = cfo - capex
+    def get_avg_value(records, metric_name, years=3):
+        for row in records:
+            if metric_name.lower() in row.get('Metric', '').lower():
+                values = [clean_float(v) for k, v in row.items() if k != 'Metric' and v and v != '']
+                if not values: return 0
+                return sum(values[-years:]) / min(len(values), years)
+        return 0
+
+    # 3. Free Cash Flow (Average of last 3 years to smooth CapEx)
+    cfo_avg = get_avg_value(cf, "Cash from Operating Activity", years=3)
+    capex_avg = abs(get_avg_value(cf, "Fixed assets purchased", years=3))
+    
+    # Financial sectors often have negative CFO. If so, fallback to Net Profit proxy if they are profitable
+    latest_np = get_latest_value(pnl, "Net Profit")
+    sector = ratios.get('Sector', 'Other')
+    
+    if "Bank" in sector or "Finance" in sector:
+        # For financials, use Earnings as a proxy
+        fcf = latest_np
+    else:
+        fcf = cfo_avg - capex_avg
+        # If FCF is still strictly negative because of extreme CapEx, check if business is actually highly profitable
+        if fcf <= 0 and latest_np > 0:
+            fcf = latest_np * 0.40  # Assume 40% conversion of net profit to FCF proxy rather than 0 value
+        
     
     # 4. Shareholding Activity (DII + FII)
     fii_latest = get_latest_value(sh, "FIIs")
     dii_latest = get_latest_value(sh, "DIIs")
     
     # Logic for Scores (0-100)
-    intrinsic_val = calculate_dcf(fcf, growth_rate=(float(rev_cagr)/100 if rev_cagr > 0 else 0.05))
+    intrinsic_val = calculate_dcf(max(0, fcf), growth_rate=(float(rev_cagr)/100 if rev_cagr > 0 else 0.05))
     
     # Safety checks for DCF calculation
     if isinstance(intrinsic_val, complex):

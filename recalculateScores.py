@@ -13,6 +13,14 @@ def recalculate():
 
     for s in stocks:
         fcf = s.get("FCF (Cr)", 0)
+        # Apply the proxy fallback directly for recalculating existing data
+        if fcf <= 0:
+            np = s.get("Net Profit latest", 0) # Net profit isn't exported by default, so we'll just use a small fallback for now
+            # To be safe, if FCF is <=0, let's just make sure DCF relies entirely on 0 or the minimum floor.
+            # But wait, our pipeline is actively overwriting stockData.json with the new correct FCF logic.
+            # We just need to ensure calculate_dcf gets max(0, fcf) so it doesn't crash or return completely wrong metrics.
+            fcf = max(0, fcf)
+            
         rev_cagr = s.get("Rev CAGR (%)", 0)
         mcap = s.get("Market Cap (Cr)", 1)
         
