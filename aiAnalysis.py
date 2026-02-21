@@ -29,11 +29,20 @@ def get_ai_analysis(symbol):
         return get_fallback_scores(symbol)
 
     prompt = f"""
-    Analyze the Indian stock symbol '{symbol}' and provide a score (0-100) for the following categories:
-    1. Customer Satisfaction (How happy are the customers with their products/services?)
-    2. Moat Analysis (How strong is their competitive advantage or brand?)
-    3. Tailwind Sector Score (Does the sector like AI, Green Energy, Defense, etc., have strong growth prospects?)
-    4. Management Quality Score (Is the management honest, vision-driven, and shareholder-friendly?)
+    Analyze the Indian stock symbol '{symbol}' and provide a score (0-100) for the following categories. 
+    YOU MUST BE EXTREMELY SKEPTICAL AND STINGY WITH HIGH SCORES. 
+    
+    SCORING RUBRIC:
+    - 90-100: Reserved for generational, world-class monopolies (e.g., Google, Apple, or Asian Paints in India).
+    - 75-89: Very strong, dominant players with clear competitive advantages.
+    - 50-74: Average, standard businesses with significant competition.
+    - Below 50: Weak players, commoditized businesses, or management with red flags.
+
+    CATEGORIES:
+    1. Customer Satisfaction (Actual verified happiness, brand loyalty, and recurring NPS)
+    2. Moat Analysis (Strict barriers to entry: Network effects, high switching costs, or legal monopolies. Branding alone is NOT a moat.)
+    3. Tailwind Sector Score (Structural growth trends: AI, Energy, Defense. Be critical of over-hyped sectors.)
+    4. Management Quality Score (Check past transparency, capital allocation history, and promoter integrity. Penalize high promoter pledging.)
 
     Provide the output strictly in JSON format with the following keys:
     "customer_satisfaction": (integer),
@@ -42,7 +51,7 @@ def get_ai_analysis(symbol):
     "management_quality": (integer),
     "notes": (string, detailed summary covering Moat, Customer Satisfaction, Tailwinds, and Management Quality)
 
-    Be detailed in the 'notes' section. Mention specific competitive advantages, market sentiment, and sector outlook.
+    Be brutally honest and detailed in the 'notes' section.
     Only return the JSON.
     """
 
@@ -56,7 +65,7 @@ def get_ai_analysis(symbol):
             json={
                 "model": "deepseek-chat",
                 "messages": [
-                    {"role": "system", "content": "You are a professional financial analyst specialized in Indian markets. Your analysis is thorough and data-driven."},
+                    {"role": "system", "content": "You are a cynical and extremely conservative hedge fund analyst. Your job is to find reasons NOT to buy a stock. You are stingy with praise and only give high qualitative scores to companies with unquestionable, objective dominance."},
                     {"role": "user", "content": prompt}
                 ],
                 "response_format": {"type": "json_object"}
@@ -77,36 +86,28 @@ def get_ai_analysis(symbol):
         return get_fallback_scores(symbol)
 
 def get_fallback_scores(symbol):
-    # Expanded pre-calculated data with detailed notes
+    # Conservative pre-calculated data
     knowledge_base = {
         "RELIANCE": {
-            "customer_satisfaction": 90, "moat": 88, "tailwind": 92, "management_quality": 90,
-            "notes": "MOAT: Unparalleled ecosystem dominance through Jio (data leadership) and Retail (physical footprint). Massive refining scale provides cost advantages. CUSTOMER SAT: High loyalty in Jio due to aggressive pricing and 5G rollout. TAILWINDS: Pivot to Green Hydrogen and Solar provides long-term growth; Retail growth in Tier-2/3 cities is a major driver. MGMT: Visionary leadership with a track record of successful capital allocation."
+            "customer_satisfaction": 80, "moat": 85, "tailwind": 85, "management_quality": 82,
+            "notes": "MOAT: Massive capital scale and vertical integration. Jio is a network-effect leader but faces tight regulation and RCom legacy issues. Retailing is competitive. MGMT: Visionary but highly complex holding structure."
         },
         "TCS": {
-            "customer_satisfaction": 92, "moat": 95, "tailwind": 88, "management_quality": 95,
-            "notes": "MOAT: Gigantic switching costs for Fortune 500 clients; deep institutional memory. Brand association with Tata Group provides trust. CUSTOMER SAT: Consistent #1 ranking in European customer satisfaction surveys for IT services. TAILWINDS: Strong pipeline in Cloud migration and Enterprise AI (OpenAI partnership). MGMT: Conservative yet highly stable management with excellent capital return (dividends/buybacks)."
-        },
-        "INFY": {
-            "customer_satisfaction": 82, "moat": 80, "tailwind": 85, "management_quality": 82,
-            "notes": "MOAT: Strong digital transformation brand with proprietary tools like Finacle. Narrower moat than TCS due to higher attrition sensitivity. CUSTOMER SAT: Strong focus on CX/UX but faces tough competition. TAILWINDS: AI-first strategy is gaining momentum; 90% of top clients engaged in AI. MGMT: Technocratic leadership but has historically faced occasional internal friction."
+            "customer_satisfaction": 88, "moat": 90, "tailwind": 75, "management_quality": 92,
+            "notes": "MOAT: Deep switching costs and high-trust 'Tata' brand. Best-in-class operational margins. TAILWINDS: IT sector growth is slowing; faces AI disruption risk. MGMT: Gold standard for governance."
         },
         "HDFCBANK": {
-            "customer_satisfaction": 72, "moat": 94, "tailwind": 85, "management_quality": 88,
-            "notes": "MOAT: Largest private bank network in India; low-cost CASA deposits. Post-merger synergy with HDFC Ltd allows massive cross-selling. CUSTOMER SAT: Mixed reviews due to legacy digital infrastructure issues, but remains the 'gold standard' for reliability in loans. TAILWINDS: India's credit growth story and increasing financialization of savings. MGMT: Proven execution but faces near-term pressure of integrating a massive merger."
-        },
-        "ICICIBANK": {
-            "customer_satisfaction": 80, "moat": 92, "tailwind": 88, "management_quality": 90,
-            "notes": "MOAT: Highly digitized retail lending platform (iMobile Pay). Strong capital adequacy and balanced risk portfolio. CUSTOMER SAT: Superior tech experience compared to peers; high 'Millennial' adoption. TAILWINDS: Strong retail credit demand and best-in-class asset quality. MGMT: Under Sandeep Bakhshi, management has transformed the culture into a highly risk-focused and performance-oriented machine."
+            "customer_satisfaction": 65, "moat": 85, "tailwind": 80, "management_quality": 82,
+            "notes": "MOAT: Largest private deposit base. Post-merger integration is a huge operational risk. CUSTOMER SAT: Digital infrastructure remains a weak point; high friction in customer service. MGMT: Solid track record but currently in a 'prove it' phase post-merger."
         }
     }
     
     default_scores = {
-        "customer_satisfaction": 70,
-        "moat": 65,
-        "tailwind": 75,
-        "management_quality": 75,
-        "notes": "MOAT: Moderate brand presence but faces sector competition. CUSTOMER SAT: Average market perception. TAILWINDS: Sector growth is stable but not disruptive. MGMT: Standard compliance and governance-led management."
+        "customer_satisfaction": 40,
+        "moat": 35,
+        "tailwind": 50,
+        "management_quality": 45,
+        "notes": "MOAT: Weak or undefined. Operates in a crowded, commoditized market. CUSTOMER SAT: Unremarkable. MGMT: Standard compliance without significant alpha-driven vision. High potential for capital misallocation."
     }
     
     return knowledge_base.get(symbol.upper(), default_scores)

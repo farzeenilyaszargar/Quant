@@ -78,41 +78,55 @@ def main():
         print(f"Starting analysis for {len(stocks_to_process)} remaining stocks (Total: {len(all_stocks)})...")
         results = existing_results
         
-        # Process one by one with immediate save
-        for s in stocks_to_process:
+        import threading
+        save_lock = threading.Lock()
+        
+        def worker(s):
             res = process_single_stock(s)
-            if res:
-                results.append(res)
-                print(f"Success: {s}! Optimizing and saving...")
-                
-                # Apply allocation logic to the current set of results
-                valid_results = [r for r in results if 'final_score' in r]
-                
-                # First, ensure all have broad sector for the "All Stocks" view
-                from portfolioOptimizer import get_broad_sector
-                for r in valid_results:
-                    r['Broad Sector'] = get_broad_sector(r.get('Sector', 'Other'))
-                
-                # Get the filtered top 50 allocations
-                allocations = allocate_portfolio(valid_results)
-                
-                # Reset all weights first
-                for r in valid_results:
-                    r['portfolio_weight'] = 0
-                
-                # Assign weights to the selected ones
-                for alloc in allocations:
-                    match = next((r for r in valid_results if r['symbol'] == alloc['symbol']), None)
-                    if match:
-                        match['portfolio_weight'] = alloc['final_weight']
-                
-                # Sort full results by score for the table
-                valid_results.sort(key=lambda x: x.get('final_score', 0), reverse=True)
-                save_outputs(valid_results)
-            else:
-                print(f"Skipped {s} (fetch failed or error).")
-                # Even on skip, we might want to wait a bit longer
-                time.sleep(random.uniform(10, 20))
+            with save_lock:
+                if res:
+                    results.append(res)
+                    print(f"Success: {s}! Optimizing and saving...")
+                    
+                    # Apply allocation logic to the current set of results
+                    valid_results = [r for r in results if 'final_score' in r]
+                    
+                    # First, ensure all have broad sector for the "All Stocks" view
+                    from portfolioOptimizer import get_broad_sector
+                    for r in valid_results:
+                        r['Broad Sector'] = get_broad_sector(r.get('Sector', 'Other'))
+                    
+                    # Get the filtered top 50 allocations
+                    try:
+                        allocations = allocate_portfolio(valid_results)
+                        
+                        # Reset all weights first
+                        for r in valid_results:
+                            r['portfolio_weight'] = 0
+                        
+                        # Assign weights to the selected ones
+                        for alloc in allocations:
+                            match = next((r for r in valid_results if r['symbol'] == alloc['symbol']), None)
+                            if match:
+                                match['portfolio_weight'] = alloc['final_weight']
+                    except Exception as e:
+                        print(f"Error during allocation for {s}: {e}")
+                    
+                    # Sort full results by score for the table
+                    valid_results.sort(key=lambda x: x.get('final_score', 0), reverse=True)
+                    save_outputs(valid_results)
+                else:
+                    print(f"Skipped {s} (fetch failed or error).")
+                    # Even on skip, we might want to wait a bit longer
+                    time.sleep(random.uniform(10, 20))
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {executor.submit(worker, s): s for s in stocks_to_process}
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as exc:
+                    print(f"Thread for {futures[future]} generated an exception: {exc}")
 
     print(f"\nScanning complete or paused. {len(results)} stocks in portfolio.")
 
