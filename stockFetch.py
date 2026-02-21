@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+import json
 
 BASE_URL = "https://www.screener.in/company/{}/consolidated/"
 
@@ -13,7 +14,7 @@ def fetch_page(symbol):
     res = requests.get(url, headers=HEADERS)
     if res.status_code != 200:
         raise Exception("Failed to fetch page")
-    return BeautifulSoup(res.text, "lxml")
+    return BeautifulSoup(res.text, "html.parser")
 
 
 def get_ratios(soup):
@@ -46,16 +47,32 @@ def parse_table(soup, section_id):
 
 
 def getStockData(symbol):
-    soup = fetch_page(symbol)
+    try:
+        soup = fetch_page(symbol)
+        data = {'symbol': symbol}
+        
+        # 1. Basic Ratios from top panel
+        ratios = get_ratios(soup)
+        data['ratios'] = ratios
+        
+        # 2. Financial Tables
+        try:
+            data['pnl'] = parse_table(soup, "profit-loss").to_dict('records')
+        except: data['pnl'] = []
+            
+        try:
+            data['balance_sheet'] = parse_table(soup, "balance-sheet").to_dict('records')
+        except: data['balance_sheet'] = []
+            
+        try:
+            data['cash_flow'] = parse_table(soup, "cash-flow").to_dict('records')
+        except: data['cash_flow'] = []
 
-    data = {}
+        try:
+            data['shareholding'] = parse_table(soup, "shareholding").to_dict('records')
+        except: data['shareholding'] = []
 
-    # Ratios
-    data["ratios"] = get_ratios(soup)
-
-    # Tables
-    data["profit_loss"] = parse_table(soup, "profit-loss")
-    data["balance_sheet"] = parse_table(soup, "balance-sheet")
-    data["cash_flow"] = parse_table(soup, "cash-flow")
-
-    return data
+        return data
+    except Exception as e:
+        print(f"Error fetching data for {symbol}: {e}")
+        return None
