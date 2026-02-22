@@ -1,9 +1,17 @@
-import requests
-from bs4 import BeautifulSoup
-import pandas as pd
-import json
+"""
+stockFetch.py
+--------------
+Scrapes financial data for Indian equities from screener.in.
+Data extracted includes: key ratios, company profile, P&L, balance sheet,
+cash flow, and shareholding tables.
+"""
+
 import random
 import time
+
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -13,14 +21,15 @@ USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
 ]
 
-def get_session():
+# Shared session with retry logic
+def _build_session() -> requests.Session:
     session = requests.Session()
     retry = Retry(
         total=3,
-        backoff_factor=1,
+        backoff_factor=1.5,
         status_forcelist=[429, 500, 502, 503, 504],
     )
     adapter = HTTPAdapter(max_retries=retry)
@@ -28,103 +37,135 @@ def get_session():
     session.mount("http://", adapter)
     return session
 
-SESSION = get_session()
+SESSION = _build_session()
 
-def fetch_page(symbol):
+
+def _fetch_page(symbol: str) -> BeautifulSoup:
+    """Fetches and parses the screener.in page for a given symbol."""
     url = BASE_URL.format(symbol)
     headers = {
         "User-Agent": random.choice(USER_AGENTS),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
         "DNT": "1",
         "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1"
+        "Upgrade-Insecure-Requests": "1",
     }
-    # Add a jitter delay before every request
+    # Polite jitter delay to avoid rate limits
     time.sleep(random.uniform(5, 10))
-    
     res = SESSION.get(url, headers=headers, timeout=30)
     if res.status_code != 200:
-        raise Exception(f"Failed to fetch page: HTTP {res.status_code}")
+        raise ConnectionError(f"HTTP {res.status_code} for {symbol}")
     return BeautifulSoup(res.text, "html.parser")
 
 
-def get_ratios(soup):
+def _parse_ratios(soup: BeautifulSoup) -> dict:
+    """Extracts key ratios from the top panel and sector from peer links."""
     ratios = {}
+    for item in soup.find_all("li", class_="flex flex-space-between"):
+        try:
+            key = item.find("span", class_="name").text.strip()
+            val = item.find("span", class_="number").text.strip()
+            ratios[key] = val
+        except AttributeError:
+            continue
 
-    top = soup.find_all("li", class_="flex flex-space-between")
-
-    for item in top:
-        key = item.find("span", class_="name").text.strip()
-        value = item.find("span", class_="number").text.strip()
-        ratios[key] = value
-
-    # Also try to get Sector
+    # Sector from peers section (most reliable)
     try:
-        # Check peers section first as it's very reliable
         peers = soup.find("section", {"id": "peers"})
         if peers:
-            # The first few links in the peers section are usually Sector > Industry
-            sector_links = peers.find_all("a", href=lambda x: x and "/market/" in x)
-            if sector_links:
-                ratios["Sector"] = sector_links[0].text.strip()
-        
-        # Fallback to breadcrumb if sector still missing
-        if "Sector" not in ratios:
-            breadcrumb = soup.find("p", class_="breadcrumb")
-            if breadcrumb:
-                links = breadcrumb.find_all("a")
+            links = peers.find_all("a", href=lambda x: x and "/market/" in x)
+            if links:
+                ratios["Sector"] = links[0].text.strip()
+    except Exception:
+        pass
+
+    # Fallback: breadcrumb
+    if "Sector" not in ratios:
+        try:
+            bc = soup.find("p", class_="breadcrumb")
+            if bc:
+                links = bc.find_all("a")
                 if len(links) >= 2:
                     ratios["Sector"] = links[1].text.strip()
-    except:
-        pass
+        except Exception:
+            pass
 
     return ratios
 
 
-def parse_table(soup, section_id):
+def _parse_table(soup: BeautifulSoup, section_id: str) -> list[dict]:
+    """Parses a financial table (P&L, Balance Sheet, etc.) into a list of row dicts."""
     section = soup.find("section", {"id": section_id})
+    if not section:
+        return []
     table = section.find("table")
+    if not table:
+        return []
 
     headers = [th.text.strip() for th in table.find_all("th")][1:]
-
     rows = []
     for tr in table.find_all("tr")[1:]:
         cols = [td.text.strip().replace(",", "") for td in tr.find_all("td")]
         if cols:
-            rows.append(cols)
+            row = {"Metric": cols[0]}
+            row.update(dict(zip(headers, cols[1:])))
+            rows.append(row)
+    return rows
 
-    df = pd.DataFrame(rows, columns=["Metric"] + headers)
-    return df
 
+def _parse_company_profile(soup: BeautifulSoup) -> tuple[str, str]:
+    """Returns (company_full_name, about_text) from the page."""
+    name = ""
+    about = ""
 
-def getStockData(symbol):
     try:
-        soup = fetch_page(symbol)
-        data = {'symbol': symbol}
-        
-        # 1. Basic Ratios from top panel
-        ratios = get_ratios(soup)
-        data['ratios'] = ratios
-        
-        # 2. Financial Tables
-        try:
-            data['pnl'] = parse_table(soup, "profit-loss").to_dict('records')
-        except: data['pnl'] = []
-            
-        try:
-            data['balance_sheet'] = parse_table(soup, "balance-sheet").to_dict('records')
-        except: data['balance_sheet'] = []
-            
-        try:
-            data['cash_flow'] = parse_table(soup, "cash-flow").to_dict('records')
-        except: data['cash_flow'] = []
+        name = soup.find("h1").text.strip()
+    except Exception:
+        pass
 
-        try:
-            data['shareholding'] = parse_table(soup, "shareholding").to_dict('records')
-        except: data['shareholding'] = []
+    try:
+        profile_div = soup.find("div", class_="company-profile")
+        if profile_div:
+            raw = profile_div.text
+            # Strip junk headers
+            for token in ("About", "Key Points", "Read More"):
+                raw = raw.replace(token, "")
+            about = raw.strip()
+    except Exception:
+        pass
 
-        return data
+    return name, about
+
+
+def getStockData(symbol: str) -> dict | None:
+    """
+    Main entry point. Fetches all data for a symbol from screener.in.
+
+    Returns a dict with keys:
+        symbol, Company Name, About, ratios, pnl, balance_sheet, cash_flow, shareholding
+    Returns None on failure.
+    """
+    try:
+        soup = _fetch_page(symbol)
     except Exception as e:
-        print(f"Error fetching data for {symbol}: {e}")
+        print(f"  [FETCH ERROR] {symbol}: {e}")
+        return None
+
+    try:
+        company_name, about = _parse_company_profile(soup)
+        ratios = _parse_ratios(soup)
+
+        return {
+            "symbol": symbol,
+            "Company Name": company_name or symbol,
+            "About": about or "N/A",
+            "ratios": ratios,
+            "pnl": _parse_table(soup, "profit-loss"),
+            "balance_sheet": _parse_table(soup, "balance-sheet"),
+            "cash_flow": _parse_table(soup, "cash-flow"),
+            "shareholding": _parse_table(soup, "shareholding"),
+        }
+    except Exception as e:
+        print(f"  [PARSE ERROR] {symbol}: {e}")
         return None

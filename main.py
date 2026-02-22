@@ -1,144 +1,183 @@
+"""
+main.py
+--------
+Entry point for the Quant Stock Analysis Pipeline.
+
+Workflow per stock:
+    1. Fetch financial data from screener.in       (stockFetch)
+    2. Process into structured metrics & scores    (processData)
+    3. Get AI qualitative scores                   (aiAnalysis)
+    4. Compute final composite score               (calcEngine)
+    5. Optimise portfolio allocation               (portfolioOptimizer)
+    6. Save incrementally to stockData.json
+
+Run:
+    python main.py
+
+Resumable: Already-processed symbols are skipped automatically.
+To re-run everything, clear stockData.json first.
+"""
+
 import json
 import random
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from stockFetch import getStockData
-from processData import getRatios
+
 from aiAnalysis import get_ai_analysis
 from calcEngine import calculate_weighted_score
-from portfolioOptimizer import allocate_portfolio
+from portfolioOptimizer import allocate_portfolio, get_broad_sector
+from processData import getRatios
+from stockFetch import getStockData
 
-# Load existing results to resume
-def load_existing():
+# ── Configuration ────────────────────────────────────────────────────────────
+
+DATA_FILE = "stockData.json"
+WEBSITE_DATA_FILE = "website/data/stockData.json"
+STOCK_LIST_FILE = "listOfStocks.json"
+MAX_WORKERS = 5
+
+# ── Persistence ─────────────────────────────────────────────────────────────
+
+def _load_existing() -> list[dict]:
     try:
-        with open("stockData.json", "r") as f:
+        with open(DATA_FILE) as f:
             return json.load(f)
-    except:
+    except (FileNotFoundError, json.JSONDecodeError):
         return []
 
-def process_single_stock(stock):
-    # Add a random delay to avoid rate limits
-    time.sleep(random.uniform(2, 5))
-    
-    print(f"--- Analyzing {stock} ---")
-    try:
-        # 1. Fetch with retries handled in stockFetch (usually)
-        raw_data = getStockData(stock)
-        if not raw_data:
-            return None
-            
-        # 2. Process Financials
-        processed = getRatios(raw_data)
-        if not processed:
-            return None
-            
-        # 3. Get AI Insights
-        ai_insights = get_ai_analysis(stock)
-        
-        # 4. Integrate scores
-        moat_and_sat_score = (ai_insights.get('customer_satisfaction', 50) + ai_insights.get('moat', 50)) / 2
-        tailwind_score = ai_insights.get('tailwind', 50)
-        management_score = ai_insights.get('management_quality', 50)
-        
-        scores = processed['scores']
-        scores['moat_score'] = moat_and_sat_score
-        scores['tailwind_score'] = tailwind_score
-        scores['management_score'] = management_score
-        
-        # 5. Calculate Final Score
-        final_score = calculate_weighted_score(scores)
-        processed['final_score'] = final_score
-        processed['ai_notes'] = ai_insights.get('notes', "Brief analysis performed.")
-        
-        return processed
-    except Exception as e:
-        print(f"Error processing {stock}: {e}")
-        return None
 
-def main():
-    print("Initializing Quant Bot...")
-    try:
-        with open("listOfStocks.json", "r") as f:
-            all_stocks = json.load(f)
-    except FileNotFoundError:
-        print("listOfStocks.json not found.")
-        return
-
-    existing_results = load_existing()
-    existing_symbols = {r['symbol'] for r in existing_results}
-    
-    # Filter out already processed stocks to support resuming
-    stocks_to_process = [s for s in all_stocks if s not in existing_symbols]
-    
-    if not stocks_to_process:
-        print("All stocks from list are already processed. To re-run, clear stockData.json.")
-        # But we still want to re-calculate portfolio allocation
-        results = existing_results
-    else:
-        print(f"Starting analysis for {len(stocks_to_process)} remaining stocks (Total: {len(all_stocks)})...")
-        results = existing_results
-        
-        import threading
-        save_lock = threading.Lock()
-        
-        def worker(s):
-            res = process_single_stock(s)
-            with save_lock:
-                if res:
-                    results.append(res)
-                    print(f"Success: {s}! Optimizing and saving...")
-                    
-                    # Apply allocation logic to the current set of results
-                    valid_results = [r for r in results if 'final_score' in r]
-                    
-                    # First, ensure all have broad sector for the "All Stocks" view
-                    from portfolioOptimizer import get_broad_sector
-                    for r in valid_results:
-                        r['Broad Sector'] = get_broad_sector(r.get('Sector', 'Other'))
-                    
-                    # Get the filtered top 50 allocations
-                    try:
-                        allocations = allocate_portfolio(valid_results)
-                        
-                        # Reset all weights first
-                        for r in valid_results:
-                            r['portfolio_weight'] = 0
-                        
-                        # Assign weights to the selected ones
-                        for alloc in allocations:
-                            match = next((r for r in valid_results if r['symbol'] == alloc['symbol']), None)
-                            if match:
-                                match['portfolio_weight'] = alloc['final_weight']
-                    except Exception as e:
-                        print(f"Error during allocation for {s}: {e}")
-                    
-                    # Sort full results by score for the table
-                    valid_results.sort(key=lambda x: x.get('final_score', 0), reverse=True)
-                    save_outputs(valid_results)
-                else:
-                    print(f"Skipped {s} (fetch failed or error).")
-                    # Even on skip, we might want to wait a bit longer
-                    time.sleep(random.uniform(10, 20))
-
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            futures = {executor.submit(worker, s): s for s in stocks_to_process}
-            for future in as_completed(futures):
-                try:
-                    future.result()
-                except Exception as exc:
-                    print(f"Thread for {futures[future]} generated an exception: {exc}")
-
-    print(f"\nScanning complete or paused. {len(results)} stocks in portfolio.")
-
-def save_outputs(results):
-    with open("stockData.json", "w") as f:
+def _save(results: list[dict]) -> None:
+    """Writes results to stockData.json and the website data mirror."""
+    with open(DATA_FILE, "w") as f:
         json.dump(results, f, indent=4)
-    
     try:
-        with open("website/data/stockData.json", "w") as f:
+        with open(WEBSITE_DATA_FILE, "w") as f:
             json.dump(results, f, indent=4)
     except FileNotFoundError:
-        pass
+        pass  # Website data directory may not exist yet
+
+
+# ── Per-stock Processing ─────────────────────────────────────────────────────
+
+def _process_stock(symbol: str) -> dict | None:
+    """Fetches, processes, and scores a single stock. Returns None on failure."""
+    time.sleep(random.uniform(2, 5))  # Polite rate-limit buffer
+    print(f"  Analysing {symbol}...")
+
+    try:
+        raw = getStockData(symbol)
+        if not raw:
+            return None
+
+        processed = getRatios(raw)
+        if not processed:
+            return None
+
+        ai = get_ai_analysis(symbol)
+
+        # Merge AI qualitative scores into the scores dict
+        scores = processed["scores"]
+        scores["moat_score"] = (ai.get("customer_satisfaction", 50) + ai.get("moat", 50)) / 2
+        scores["tailwind_score"] = ai.get("tailwind", 50)
+        scores["management_score"] = ai.get("management_quality", 50)
+
+        processed["final_score"] = calculate_weighted_score(scores)
+        processed["ai_notes"] = ai.get("notes", "")
+
+        return processed
+
+    except Exception as e:
+        print(f"  [ERROR] {symbol}: {e}")
+        return None
+
+
+# ── Portfolio Rebalance ──────────────────────────────────────────────────────
+
+def _rebalance(results: list[dict]) -> list[dict]:
+    """Reassigns portfolio weights and broad sectors to all results."""
+    valid = [r for r in results if "final_score" in r]
+
+    # Assign broad sector classification
+    for r in valid:
+        r["Broad Sector"] = get_broad_sector(r.get("Sector", "Other"))
+
+    # Reset weights, then assign from optimizer
+    for r in valid:
+        r["portfolio_weight"] = 0.0
+
+    try:
+        for alloc in allocate_portfolio(valid):
+            match = next((r for r in valid if r["symbol"] == alloc["symbol"]), None)
+            if match:
+                match["portfolio_weight"] = alloc["final_weight"]
+    except Exception as e:
+        print(f"  [WARN] Portfolio rebalance error: {e}")
+
+    valid.sort(key=lambda x: x.get("final_score", 0), reverse=True)
+    return valid
+
+
+# ── Main ─────────────────────────────────────────────────────────────────────
+
+def main() -> None:
+    print("=" * 60)
+    print("  Quant Stock Analysis Pipeline")
+    print("=" * 60)
+
+    try:
+        with open(STOCK_LIST_FILE) as f:
+            all_symbols: list[str] = json.load(f)
+    except FileNotFoundError:
+        print(f"Stock list not found: {STOCK_LIST_FILE}")
+        print("Run:  python updateStockList.py")
+        return
+
+    existing = _load_existing()
+    processed_symbols = {r["symbol"] for r in existing}
+    pending = [s for s in all_symbols if s not in processed_symbols]
+
+    if not pending:
+        print("All stocks already processed. Re-balancing portfolio...")
+        final = _rebalance(existing)
+        _save(final)
+        print(f"Done. {len(final)} stocks in universe.")
+        return
+
+    print(f"Total stocks:     {len(all_symbols)}")
+    print(f"Already done:     {len(processed_symbols)}")
+    print(f"Remaining:        {len(pending)}")
+    print("-" * 60)
+
+    results = list(existing)  # mutable copy
+    save_lock = threading.Lock()
+
+    def worker(symbol: str) -> None:
+        result = _process_stock(symbol)
+        with save_lock:
+            if result:
+                results.append(result)
+                print(f"  ✓ {symbol} | Score: {result.get('final_score')}")
+                balanced = _rebalance(results)
+                _save(balanced)
+                # Reflect rebalanced weights back into results list
+                results.clear()
+                results.extend(balanced)
+            else:
+                print(f"  ✗ {symbol} – skipped")
+                time.sleep(random.uniform(8, 15))  # Extra backoff on failure
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures = {pool.submit(worker, s): s for s in pending}
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception as exc:
+                print(f"  [THREAD ERROR] {futures[future]}: {exc}")
+
+    print("=" * 60)
+    print(f"Pipeline complete. {len(results)} stocks in universe.")
+
 
 if __name__ == "__main__":
     main()
