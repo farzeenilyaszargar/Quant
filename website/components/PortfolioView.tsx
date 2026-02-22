@@ -205,8 +205,19 @@ export default function PortfolioView({ data }: { data: any[] }) {
                             <div className="flex items-center gap-4">
                                 <span className="text-2xl font-bold text-slate-300 group-hover:text-blue-500 transition-colors">{i + 1}</span>
                                 <div>
-                                    <div className="font-bold text-lg leading-tight text-slate-900 group-hover:text-blue-600 transition-colors">{s.symbol}</div>
-                                    <div className="text-xs text-slate-500 font-medium uppercase mt-0.5">{s["Broad Sector"] || 'CORE ASSET'}</div>
+                                    <div className="font-bold text-lg leading-tight text-slate-900 group-hover:text-blue-600 transition-colors">
+                                        {s["Company Name"] && s["Company Name"] !== "values missing" ? (
+                                            <>
+                                                {s["Company Name"]} <span className="text-sm font-medium text-slate-500 ml-1">({s.symbol})</span>
+                                            </>
+                                        ) : (
+                                            <span className="line-through text-slate-400">{s.symbol}</span>
+                                        )}
+                                    </div>
+                                    <div className="text-xs text-slate-500 font-medium uppercase mt-0.5">
+                                        {s["Broad Sector"] || 'CORE ASSET'}
+                                        {(!s["Company Name"] || s["Company Name"] === "values missing") && <span className="ml-2 text-red-400 font-bold lowercase italic">values missing</span>}
+                                    </div>
                                 </div>
                             </div>
                             <div className="text-right">

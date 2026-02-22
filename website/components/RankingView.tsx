@@ -49,7 +49,13 @@ export default function RankingView({ data }: { data: any[] }) {
                                     >
                                         <td className="px-6 py-5 text-slate-400 font-medium text-sm group-hover:text-slate-600 transition-colors uppercase">{i + 1}</td>
                                         <td className="px-6 py-5 whitespace-nowrap">
-                                            <div className="font-bold text-lg text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">{s.symbol}</div>
+                                            <div className="font-bold text-lg text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">
+                                                {s["Company Name"] && s["Company Name"] !== "values missing" ? (
+                                                    <>{s["Company Name"]} <span className="text-sm font-medium text-slate-500 ml-1">({s.symbol})</span></>
+                                                ) : (
+                                                    <span className="line-through text-slate-400">{s.symbol} <span className="text-xs text-red-400 font-bold lowercase italic no-underline ml-2">values missing</span></span>
+                                                )}
+                                            </div>
                                             <div className="text-xs text-slate-500 font-medium uppercase mt-0.5">{s["Broad Sector"] || 'Other'} {isTopPick && <span className="text-blue-600 font-bold ml-2 tracking-wide text-[10px]">• TOP PICK</span>}</div>
                                         </td>
                                         <td className="px-6 py-5 text-center">

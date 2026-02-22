@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import {
     RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer
 } from 'recharts';
-import { TrendingUp, Shield, BarChart3, Star, Zap, LayoutGrid } from 'lucide-react';
+import { TrendingUp, Shield, BarChart3, Star, Zap, LayoutGrid, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function InsightContent({ data }: { data: any[] }) {
@@ -55,8 +55,14 @@ function InsightContent({ data }: { data: any[] }) {
                         >
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <div className={`font-bold text-lg leading-tight ${selectedStock.symbol === s.symbol ? 'text-blue-600' : 'text-slate-900 group-hover:text-blue-600'}`}>{s.symbol}</div>
-                                    <div className="text-xs text-slate-500 font-medium uppercase mt-0.5">{s["Broad Sector"]}</div>
+                                    <div className={`font-bold text-lg leading-tight ${selectedStock.symbol === s.symbol ? 'text-blue-600' : 'text-slate-900 group-hover:text-blue-600'}`}>
+                                        {s["Company Name"] && s["Company Name"] !== "values missing" ? (
+                                            <>{s["Company Name"]}</>
+                                        ) : (
+                                            <span className="line-through text-slate-400">{s.symbol} <span className="text-xs text-red-400 font-bold lowercase italic no-underline ml-1">values missing</span></span>
+                                        )}
+                                    </div>
+                                    <div className="text-xs text-slate-500 font-medium uppercase mt-0.5">{s["Company Name"] && s["Company Name"] !== "values missing" ? s.symbol + ' • ' : ''}{s["Broad Sector"]}</div>
                                 </div>
                                 <div className={`text-xl font-bold tracking-tight ${s.final_score > 60 ? 'text-emerald-600' : 'text-slate-600'}`}>
                                     {s.final_score}
@@ -80,15 +86,32 @@ function InsightContent({ data }: { data: any[] }) {
                                 <div className="flex-1 space-y-8">
                                     <div>
                                         <div className="flex items-center gap-4 mb-2">
-                                            <h3 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900">{selectedStock.symbol}</h3>
+                                            <h3 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900">
+                                                {selectedStock["Company Name"] && selectedStock["Company Name"] !== "values missing" ? (
+                                                    selectedStock["Company Name"]
+                                                ) : (
+                                                    <span className="line-through text-slate-400">{selectedStock.symbol} <span className="text-sm text-red-400 font-bold lowercase italic no-underline ml-2">values missing</span></span>
+                                                )}
+                                            </h3>
                                             <div className="flex flex-col">
                                                 <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-md text-xs font-semibold uppercase w-max">
                                                     SCORE: {selectedStock.final_score}
                                                 </div>
                                             </div>
                                         </div>
-                                        <span className="text-slate-500 text-sm font-medium uppercase tracking-wider">{selectedStock["Broad Sector"]} | {selectedStock.Sector}</span>
+                                        <span className="text-slate-500 text-sm font-medium uppercase tracking-wider">{selectedStock.symbol} | {selectedStock["Broad Sector"]} | {selectedStock.Sector}</span>
                                     </div>
+
+                                    {selectedStock.About && selectedStock.About !== 'values missing' && (
+                                        <div className="p-6 rounded-xl bg-slate-50 border border-slate-200 mt-4 mb-4">
+                                            <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                                                <Info className="w-4 h-4" /> About Company
+                                            </div>
+                                            <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                                                {selectedStock.About}
+                                            </p>
+                                        </div>
+                                    )}
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="p-6 rounded-xl bg-slate-50 border border-slate-200">
